@@ -170,7 +170,7 @@ body, html {
   margin-right: 12px;
 }
 
-/* Modal */
+/* Modal (Centered Login/Register) */
 .modal {
   position: fixed;
   top: 0; left: 0;
@@ -344,6 +344,8 @@ body, html {
 #closeSidebarBtn {
   display: none;
 }
+
+/* Responsive (Mobile Styles) */
 @media (max-width: 768px) {
   .sidebar {
     width: 240px;
