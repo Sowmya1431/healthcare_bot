@@ -1,6 +1,6 @@
 // ====== State ======
 let token = '';
-const BACKEND_URL = 'http://localhost:5000';
+const BACKEND_URL = 'https://healthcare-bot-1vky.onrender.com';
 let chatSessions = [];
 let currentSessionIndex = -1;
 let currentUser = null;
