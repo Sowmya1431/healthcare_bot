@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Healthcare Chatbot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- 🔐 Login/Register Modal -->
+  <div class="modal" id="authModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Welcome to HealthBot</h2>
+        <p>Please login or register to continue</p>
+      </div>
+      <form id="authForm">
+        <input type="email" id="email" placeholder="Enter your email" required />
+        <input type="password" id="password" placeholder="Enter your password" required />
+        <div class="auth-buttons">
+          <button type="button" id="loginBtn" class="btn">Login</button>
+          <button type="button" id="registerBtn" class="btn">Register</button>
+        </div>
+      </form>
+      <div id="authMsg" class="auth-msg" style="display: none;"></div>
+    </div>
+  </div>
+
+  <!-- Overlay for sidebar on mobile -->
+  <div class="overlay" id="overlay"></div>
+
+  <div class="main-container">
+    <!-- 🟩 Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <button class="close-sidebar" id="closeSidebarBtn">✕</button>
+      </div>
+      <div class="brand">
+        <img src="https://img.icons8.com/color/96/000000/medical-doctor.png" alt="logo" class="logo" />
+        <h3>HealthBot</h3>
+        <p class="sidebar-subtitle">Your Healthcare Assistant</p>
+      </div>
+
+      <div class="sidebar-buttons">
+        <button class="sidebar-btn" id="newChatBtn">
+          <span>➕</span> New Chat
+        </button>
+        <button class="sidebar-btn" id="historyToggleBtn">
+          <span>📋</span> Chat History
+        </button>
+        <button class="sidebar-btn logout-btn" id="logoutBtn">
+          <span>🚪</span> Logout
+        </button>
+      </div>
+
+      <div class="history-section" id="historySection">
+        <div class="history-header">Previous Conversations</div>
+        <div class="history-list" id="historyList"></div>
+      </div>
+    </aside>
+
+    <!-- 🟦 Main Chat Panel -->
+    <main class="chat-container">
+      <header class="header">
+        <button class="menu-toggle" id="menuToggleBtn">☰</button>
+        <h1>Healthcare Chatbot</h1>
+      </header>
+
+      <section class="chatbox" id="chatbox">
+        <div class="user-info" id="userInfo">
+          <strong>Welcome!</strong> How can I help you with your health today?
+        </div>
+        <div class="chat-area" id="chatArea">
+          <!-- Initial message rendered by JS if no session -->
+        </div>
+
+        <button id="scrollToBottomBtn" class="scroll-btn" style="display: none;">↓</button>
+
+        <div class="chat-input">
+          <textarea id="prompt" placeholder="Type your health question here..." rows="2"></textarea>
+          <button id="sendBtn" class="send-btn"><span>➤</span> Send</button>
+          <button id="resetBtn" class="reset-btn">Reset</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
