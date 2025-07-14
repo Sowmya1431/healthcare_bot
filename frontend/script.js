@@ -6,6 +6,7 @@ let currentSessionIndex = -1;
 let currentUser = null;
 let isHistoryVisible = false;
 let sessionScrollPositions = {};
+let isSending = false;
 
 // ====== DOM Elements ======
 const authModal = document.getElementById('authModal');
@@ -64,11 +65,8 @@ logoutBtn.addEventListener('click', () => {
   chatSessions = [];
   currentSessionIndex = -1;
   sessionScrollPositions = {};
-
-  // 🔐 Clear localStorage
   localStorage.removeItem('token');
   localStorage.removeItem('currentUser');
-
   sidebar.classList.remove('active');
   chatbox.classList.remove('active');
   authModal.style.display = 'block';
@@ -76,7 +74,8 @@ logoutBtn.addEventListener('click', () => {
 
 // ====== Scroll Helpers ======
 function updateScrollButtonVisibility() {
-  const isAtBottom = chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < 1;
+  const threshold = 20;
+  const isAtBottom = chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < threshold;
   scrollToBottomBtn.style.display = isAtBottom ? 'none' : 'block';
 }
 
@@ -97,9 +96,10 @@ function addSessionToSidebar(title = 'New Chat', index) {
   li.className = 'history-item';
   li.setAttribute('data-index', index);
   li.innerHTML = `
-    <div class="history-text">${title}</div>
+    <div class="history-text"></div>
     <button class="delete-btn" onclick="deleteSession(${index})">🗑️</button>
   `;
+  li.querySelector('.history-text').textContent = title.length > 30 ? title.slice(0, 30) + '...' : title;
   li.addEventListener('click', (e) => {
     if (e.target.classList.contains('delete-btn')) return;
     loadSession(index);
@@ -116,15 +116,30 @@ function updateSidebarTitle(index, newTitle) {
   }
 }
 
+function deleteSession(index) {
+  if (confirm('Delete this chat?')) {
+    chatSessions.splice(index, 1);
+    delete sessionScrollPositions[index];
+    historyList.innerHTML = '';
+    chatSessions.forEach((session, idx) => {
+      const title = session.find(m => m.sender === 'user')?.text || 'New Chat';
+      addSessionToSidebar(title, idx);
+    });
+    if (currentSessionIndex === index) {
+      newChatSession();
+    } else if (currentSessionIndex > index) {
+      currentSessionIndex--;
+    }
+  }
+}
+
 // ====== Chat Sessions ======
 function newChatSession() {
   chatSessions.push([]);
   currentSessionIndex = chatSessions.length - 1;
   addSessionToSidebar('New Chat', currentSessionIndex);
   chatArea.innerHTML = `
-    <div class="chat-bubble bot">
-      Hello! I'm your healthcare assistant. How can I help you today?
-    </div>
+    <div class="chat-bubble bot">Hello! I'm your healthcare assistant. How can I help you today?</div>
     <div class="chat-meta">HealthBot • ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
   `;
   promptInput.value = '';
@@ -145,37 +160,12 @@ function displayChatMessages(messages) {
     meta.textContent = `${msg.sender === 'user' ? 'You' : 'HealthBot'} • ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     chatArea.appendChild(meta);
   });
-
   if (sessionScrollPositions[currentSessionIndex] !== undefined) {
     chatArea.scrollTo({ top: sessionScrollPositions[currentSessionIndex], behavior: 'smooth' });
   } else {
     scrollToBottom();
   }
-
   updateScrollButtonVisibility();
-}
-
-function deleteSession(index) {
-  if (confirm('Delete this chat?')) {
-    chatSessions.splice(index, 1);
-    delete sessionScrollPositions[index];
-    historyList.removeChild(historyList.children[index]);
-
-    Array.from(historyList.children).forEach((li, idx) => {
-      li.setAttribute('data-index', idx);
-      li.querySelector('button').setAttribute('onclick', `deleteSession(${idx})`);
-      li.addEventListener('click', (e) => {
-        if (e.target.classList.contains('delete-btn')) return;
-        loadSession(idx);
-      });
-    });
-
-    if (currentSessionIndex === index) {
-      newChatSession();
-    } else if (currentSessionIndex > index) {
-      currentSessionIndex--;
-    }
-  }
 }
 
 function loadSession(index) {
@@ -184,25 +174,18 @@ function loadSession(index) {
   displayChatMessages(chatSessions[index]);
 }
 
-// ====== Register (No auto-login) ======
+// ====== Register ======
 async function register() {
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value.trim();
-
-  if (!email || !password) {
-    showMessage('Enter both email and password', 'error');
-    return;
-  }
-
+  if (!email || !password) return showMessage('Enter both email and password', 'error');
   try {
     const res = await fetch(`${BACKEND_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password })
     });
-
     if (!res.ok) throw new Error(await res.text());
-
     const data = await res.json();
     showMessage(data.msg || 'Registered successfully!', 'success');
   } catch (err) {
@@ -215,36 +198,24 @@ async function register() {
 async function login() {
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value.trim();
-
-  if (!email || !password) {
-    showMessage('Enter both email and password', 'error');
-    return;
-  }
-
+  if (!email || !password) return showMessage('Enter both email and password', 'error');
   try {
     const res = await fetch(`${BACKEND_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password })
     });
-
     if (!res.ok) throw new Error(await res.text());
-
     const data = await res.json();
-
     if (data.token) {
       token = data.token;
       currentUser = { email };
-
-      // ✅ Save to localStorage
       localStorage.setItem('token', token);
       localStorage.setItem('currentUser', JSON.stringify(currentUser));
-
       authModal.style.display = 'none';
       sidebar.classList.add('active');
       chatbox.classList.add('active');
       userInfo.innerHTML = `<strong>Welcome, ${email}!</strong> How can I help you today?`;
-
       await loadChatHistoryFromBackend();
       if (chatSessions.length === 0) newChatSession();
     } else {
@@ -256,20 +227,20 @@ async function login() {
   }
 }
 
-// ====== Chat API Send ======
+// ====== Send Prompt ======
 async function sendPrompt() {
+  if (isSending) return;
   const prompt = promptInput.value.trim();
   if (!prompt) return;
-
+  isSending = true;
+  sendBtn.disabled = true;
   const userMsg = { sender: 'user', text: prompt };
   if (currentSessionIndex === -1) newChatSession();
   chatSessions[currentSessionIndex].push(userMsg);
   displayChatMessages(chatSessions[currentSessionIndex]);
-
   if (chatSessions[currentSessionIndex].length === 1) {
     updateSidebarTitle(currentSessionIndex, prompt);
   }
-
   try {
     const res = await fetch(`${BACKEND_URL}/api/chat`, {
       method: 'POST',
@@ -277,33 +248,30 @@ async function sendPrompt() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt })
     });
-
     const data = await res.json();
-    const botMsg = { sender: 'bot', text: data.response || 'No response.' };
+    const botMsg = { sender: 'bot', text: data.response?.trim() || 'No response.' };
     chatSessions[currentSessionIndex].push(botMsg);
-    displayChatMessages(chatSessions[currentSessionIndex]);
   } catch (err) {
     console.error('Chat Error:', err);
     chatSessions[currentSessionIndex].push({ sender: 'bot', text: 'Error occurred. Try again.' });
-    displayChatMessages(chatSessions[currentSessionIndex]);
   }
-
+  displayChatMessages(chatSessions[currentSessionIndex]);
   promptInput.value = '';
   scrollToBottom();
+  sendBtn.disabled = false;
+  isSending = false;
 }
 
-// ====== Load Chat History ======
+// ====== Load History ======
 async function loadChatHistoryFromBackend() {
   try {
     const res = await fetch(`${BACKEND_URL}/api/chat`, {
       method: 'GET',
-      headers: { 'Authorization': `Bearer ${token}` },
+      headers: { 'Authorization': `Bearer ${token}` }
     });
-
     const data = await res.json();
-
     if (Array.isArray(data.chats)) {
       const grouped = {};
       data.chats.forEach(chat => {
@@ -314,13 +282,11 @@ async function loadChatHistoryFromBackend() {
           { sender: 'bot', text: chat.response }
         );
       });
-
       Object.entries(grouped).forEach(([title, messages]) => {
         chatSessions.push(messages);
         currentSessionIndex = chatSessions.length - 1;
         addSessionToSidebar(title, currentSessionIndex);
       });
-
       if (chatSessions.length > 0) loadSession(chatSessions.length - 1);
     }
   } catch (err) {
@@ -360,20 +326,16 @@ promptInput.addEventListener('input', function () {
   this.style.height = Math.min(this.scrollHeight, 120) + 'px';
 });
 
-// ====== Auto-login on Refresh ======
 window.addEventListener('DOMContentLoaded', async () => {
   const savedToken = localStorage.getItem('token');
   const savedUser = localStorage.getItem('currentUser');
-
   if (savedToken && savedUser) {
     token = savedToken;
     currentUser = JSON.parse(savedUser);
-
     authModal.style.display = 'none';
     sidebar.classList.add('active');
     chatbox.classList.add('active');
     userInfo.innerHTML = `<strong>Welcome, ${currentUser.email}!</strong> How can I help you today?`;
-
     await loadChatHistoryFromBackend();
     if (chatSessions.length === 0) newChatSession();
   } else {
