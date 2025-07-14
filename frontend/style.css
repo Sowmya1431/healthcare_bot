@@ -170,15 +170,16 @@ body, html {
   margin-right: 12px;
 }
 
-/* Modal */
+/* ✅ Fixed Modal */
 .modal {
-  position: relative;
+  position: fixed;
   top: 0; left: 0;
-  width: 100%; height: 100%;
+  width: 100%; height: 100vh;
   background: rgba(0,0,0,0.4);
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+  z-index: 250;
 }
 .modal-content {
   background: #fff;
@@ -190,10 +191,6 @@ body, html {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  justify-content: center;
-}
-.modal-header {
-  text-align: center;
 }
 .modal-header h2 {
   font-size: 1.8rem;
@@ -347,7 +344,6 @@ body, html {
 #closeSidebarBtn {
   display: none;
 }
-
 @media (max-width: 768px) {
   .sidebar {
     width: 240px;
